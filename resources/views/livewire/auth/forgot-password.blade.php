@@ -5,38 +5,38 @@ use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 
 new #[Layout('components.layouts.auth')] class extends Component {
-    public string $email = '';
+    public string $phone = '';
 
     /**
-     * Send a password reset link to the provided email address.
+     * Send a password reset link to the provided phone address.
      */
     public function sendPasswordResetLink(): void
     {
         $this->validate([
-            'email' => ['required', 'string', 'email'],
+            'phone' => ['required', 'string'],
         ]);
 
-        Password::sendResetLink($this->only('email'));
+        Password::sendResetLink($this->only('phone'));
 
         session()->flash('status', __('A reset link will be sent if the account exists.'));
     }
 }; ?>
 
 <div class="flex flex-col gap-6">
-    <x-auth-header :title="__('Forgot password')" :description="__('Enter your email to receive a password reset link')" />
+    <x-auth-header :title="__('Forgot password')" :description="__('Enter your phone to receive a password reset link')" />
 
     <!-- Session Status -->
     <x-auth-session-status class="text-center" :status="session('status')" />
 
     <form method="POST" wire:submit="sendPasswordResetLink" class="flex flex-col gap-6">
-        <!-- Email Address -->
+        <!-- phone Address -->
         <flux:input
-            wire:model="email"
-            :label="__('Email Address')"
-            type="email"
+            wire:model="phone"
+            :label="__('Phone number')"
+            type="phone"
             required
             autofocus
-            placeholder="email@example.com"
+            placeholder="08123456789"
         />
 
         <flux:button variant="primary" type="submit" class="w-full">{{ __('Email password reset link') }}</flux:button>

@@ -9,14 +9,16 @@ use Livewire\Volt\Component;
 new class extends Component {
     public string $name = '';
     public string $email = '';
+    public string $phone = '';
 
     /**
      * Mount the component.
      */
     public function mount(): void
     {
-        $this->name = Auth::user()->name;
-        $this->email = Auth::user()->email;
+    $this->name = Auth::user()->name;
+    $this->email = Auth::user()->email;
+    $this->phone = Auth::user()->phone;
     }
 
     /**
@@ -28,9 +30,14 @@ new class extends Component {
 
         $validated = $this->validate([
             'name' => ['required', 'string', 'max:255'],
-
-            'email' => [
+            'phone' => [
                 'required',
+                'string',
+                'max:20',
+                Rule::unique(User::class)->ignore($user->id)
+            ],
+            'email' => [
+                'nullable',
                 'string',
                 'lowercase',
                 'email',
@@ -76,10 +83,12 @@ new class extends Component {
         <form wire:submit="updateProfileInformation" class="my-6 w-full space-y-6">
             <flux:input wire:model="name" :label="__('Name')" type="text" required autofocus autocomplete="name" />
 
-            <div>
-                <flux:input wire:model="email" :label="__('Email')" type="email" required autocomplete="email" />
+            <flux:input wire:model="phone" :label="__('Phone number')" type="text" required autocomplete="tel" />
 
-                @if (auth()->user() instanceof \Illuminate\Contracts\Auth\MustVerifyEmail &&! auth()->user()->hasVerifiedEmail())
+            <div>
+                <flux:input wire:model="email" :label="__('Email')" type="email" autocomplete="email" />
+
+                @if (auth()->user() instanceof \Illuminate\Contracts\Auth\MustVerifyEmail && !auth()->user()->hasVerifiedEmail())
                     <div>
                         <flux:text class="mt-4">
                             {{ __('Your email address is unverified.') }}

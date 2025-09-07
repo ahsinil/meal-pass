@@ -13,7 +13,7 @@ use Livewire\Volt\Component;
 new #[Layout('components.layouts.auth')] class extends Component {
     #[Locked]
     public string $token = '';
-    public string $email = '';
+    public string $phone = '';
     public string $password = '';
     public string $password_confirmation = '';
 
@@ -24,7 +24,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
     {
         $this->token = $token;
 
-        $this->email = request()->string('email');
+        $this->phone = request()->string('phone');
     }
 
     /**
@@ -34,7 +34,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
     {
         $this->validate([
             'token' => ['required'],
-            'email' => ['required', 'string', 'email'],
+            'phone' => ['required', 'string'],
             'password' => ['required', 'string', 'confirmed', Rules\Password::defaults()],
         ]);
 
@@ -42,7 +42,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
         // will update the password on an actual user model and persist it to the
         // database. Otherwise we will parse the error and return the response.
         $status = Password::reset(
-            $this->only('email', 'password', 'password_confirmation', 'token'),
+            $this->only('phone', 'password', 'password_confirmation', 'token'),
             function ($user) {
                 $user->forceFill([
                     'password' => Hash::make($this->password),
@@ -57,7 +57,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
         // the application's home authenticated view. If there is an error we can
         // redirect them back to where they came from with their error message.
         if ($status != Password::PasswordReset) {
-            $this->addError('email', __($status));
+            $this->addError('phone', __($status));
 
             return;
         }
@@ -75,13 +75,12 @@ new #[Layout('components.layouts.auth')] class extends Component {
     <x-auth-session-status class="text-center" :status="session('status')" />
 
     <form method="POST" wire:submit="resetPassword" class="flex flex-col gap-6">
-        <!-- Email Address -->
+        <!-- phone Address -->
         <flux:input
-            wire:model="email"
-            :label="__('Email')"
-            type="email"
+            wire:model="phone"
+            :label="__('Phone Number')"
+            type="text"
             required
-            autocomplete="email"
         />
 
         <!-- Password -->
