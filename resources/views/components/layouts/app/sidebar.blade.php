@@ -15,11 +15,17 @@
                 <flux:navlist.group :heading="__('Platform')" class="grid">
                     <flux:navlist.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>{{ __('Dashboard') }}</flux:navlist.item>
                 </flux:navlist.group>
+                <flux:navlist.group :heading="__('Data')" class="grid">
+                    <flux:navlist.item icon="home" :href="route('employees')" :current="request()->routeIs('employees')" wire:navigate>{{ __('Karyawan') }}</flux:navlist.item>
+                    <flux:navlist.item icon="home" :href="route('officers')" :current="request()->routeIs('officers')" wire:navigate>{{ __('Petugas') }}</flux:navlist.item>
+                    <flux:navlist.item icon="home" :href="route('meals')" :current="request()->routeIs('meals')" wire:navigate>{{ __('Makanan') }}</flux:navlist.item>
+                    <flux:navlist.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>{{ __('Pengambilan') }}</flux:navlist.item>
+                </flux:navlist.group>
             </flux:navlist>
 
             <flux:spacer />
 
-            <flux:navlist variant="outline">
+            {{-- <flux:navlist variant="outline">
                 <flux:navlist.item icon="folder-git-2" href="https://github.com/laravel/livewire-starter-kit" target="_blank">
                 {{ __('Repository') }}
                 </flux:navlist.item>
@@ -27,7 +33,7 @@
                 <flux:navlist.item icon="book-open-text" href="https://laravel.com/docs/starter-kits#livewire" target="_blank">
                 {{ __('Documentation') }}
                 </flux:navlist.item>
-            </flux:navlist>
+            </flux:navlist> --}}
 
             <!-- Desktop User Menu -->
             <flux:dropdown class="hidden lg:block" position="bottom" align="start">
@@ -127,6 +133,8 @@
 
         {{ $slot }}
 
+        <x-toast position="top-right" timeout="3500" />
+        
         @fluxScripts
     </body>
 </html>

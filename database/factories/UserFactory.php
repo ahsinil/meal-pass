@@ -25,7 +25,14 @@ class UserFactory extends Factory
     {
         return [
             'name' => fake()->name(),
+            'first_name' => fake()->firstName(),
+            'last_name' => fake()->lastName(),
             'email' => fake()->unique()->safeEmail(),
+            'phone' => fake()->unique()->phoneNumber(),
+            'employee_code' => 'EMP' . fake()->unique()->numberBetween(1000, 9999),
+            'department' => fake()->randomElement(['HR', 'Finance', 'IT', 'Sales', 'Marketing']),
+            'pickup_code' => Str::upper(Str::random(6)),
+            'is_active' => fake()->boolean(80), // 80% chance of being active
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),

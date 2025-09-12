@@ -6,6 +6,7 @@ namespace App\Models;
 
 use Illuminate\Auth\Passwords\CanResetPassword;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Log;
@@ -14,7 +15,7 @@ use Illuminate\Support\Str;
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, CanResetPassword;
+    use HasFactory, Notifiable, CanResetPassword, SoftDeletes;
 
     /**
      * The attributes that are mass assignable.
@@ -23,9 +24,16 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'name',
+        'first_name',
+        'last_name',
         'phone',
         'email',
         'password',
+        'department',
+        'employee_code',
+        'pickup_code',
+        'is_active',
+        'is_admin',
     ];
 
     /**
@@ -83,5 +91,15 @@ class User extends Authenticatable
         // kirim WA via Fonnte
         $fonnte = new \App\Fonnte();
         $fonnte->send($this->phone, $message);
+    }
+
+    public function scopeKaryawan($query)
+    {
+        return $query->where('is_admin', 0);
+    }
+    
+    public function scopePetugas($query)
+    {
+        return $query->where('is_admin', 1);
     }
 }
