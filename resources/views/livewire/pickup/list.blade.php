@@ -258,6 +258,7 @@ $exportThisMonth = function () {
             {{-- <flux:modal.trigger name="export-form">
                 <flux:button variant="outline" icon="document-arrow-down" class="px-3 py-2 font-bold">Export Excel</flux:button>
             </flux:modal.trigger> --}}
+            @can('export_pickups')
             <flux:dropdown>
                 <flux:button variant="outline" icon="document-arrow-down">Export Excel</flux:button>
                 <flux:menu>
@@ -272,6 +273,7 @@ $exportThisMonth = function () {
                     <flux:menu.item wire:click='exportThisMonth'>Bulan Ini</flux:menu.item>
                 </flux:menu>
             </flux:dropdown>
+            @endcan
 
             {{-- Filter Dropdown --}}
             <flux:dropdown>
@@ -311,7 +313,6 @@ $exportThisMonth = function () {
                 </flux:menu>
             </flux:dropdown>
         </div>
-
 
         <div class="relative flex items-center gap-2">
             {{-- Search --}}
@@ -355,10 +356,14 @@ $exportThisMonth = function () {
                         </td> --}}
                         <td class="px-4 py-2">
                             <div class="flex flex-wrap gap-2">
+                                @can('update_pickups')
                                 <button wire:click="edit({{ $data->id }})" class="rounded-lg border border-slate-300 px-2 py-1 hover:bg-slate-50 dark:border-slate-600 dark:hover:bg-slate-700">Edit</button>
+                                @endcan
+                                @can('delete_pickups')
                                 <flux:modal.trigger name="confirm-delete" wire:click="$set('editingId', {{ $data->id }})">
                                 <button class="rounded-lg border border-red-300 px-2 py-1 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950/40">Hapus</button>
                                 </flux:modal.trigger>
+                                @endcan
                             </div>
                         </td>
                     </tr>

@@ -211,11 +211,14 @@ $export = function () {
     {{-- Toolbar --}}
     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div class="flex items-center gap-2">
+            @can('create_employees')
             <flux:modal.trigger name="employee-form">
                 <flux:button variant="primary" icon="plus" class="px-3 py-2 font-bold">Tambah Karyawan</flux:button>
             </flux:modal.trigger>
+            @endcan
+            @can('export_employees')
             <flux:button wire:click="export" variant="outline" icon="document-arrow-down" class="px-3 py-2 font-bold">Export Excel</flux:button>
-
+            @endcan
 
             {{-- Filter Dropdown --}}
             <flux:dropdown>
@@ -292,10 +295,14 @@ $export = function () {
                         <td class="px-4 py-2">
                             <div class="flex flex-wrap gap-2">
                                 {{-- @if (!$u->deleted_at) --}}
-                                    <button wire:click="edit({{ $u->id }})" class="rounded-lg border border-slate-300 px-2 py-1 hover:bg-slate-50 dark:border-slate-600 dark:hover:bg-slate-700">Edit</button>
+                                @can('update_employees')
+                                <button wire:click="edit({{ $u->id }})" class="rounded-lg border border-slate-300 px-2 py-1 hover:bg-slate-50 dark:border-slate-600 dark:hover:bg-slate-700">Edit</button>
+                                @endcan
+                                @can('delete_employees')
                                     <flux:modal.trigger name="confirm-delete" wire:click="$set('editingId', {{ $u->id }})">
                                     <button class="rounded-lg border border-red-300 px-2 py-1 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950/40">Hapus</button>
                                     </flux:modal.trigger>
+                                @endcan
                                 {{-- @else
                                     <button wire:click="restore({{ $u->id }})" class="rounded-lg border border-emerald-300 px-2 py-1 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-950/40">Restore</button>
                                     <button wire:click="forceDelete({{ $u->id }})" class="rounded-lg border border-red-300 px-2 py-1 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950/40">Hapus Permanen</button>

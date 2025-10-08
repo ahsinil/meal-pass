@@ -26,6 +26,10 @@ new class extends Component {
      */
     public function updateProfileInformation(): void
     {
+        if (! Auth::user()->can('update_profile')) {
+            abort(403);
+        }
+
         $user = Auth::user();
 
         $validated = $this->validate([
@@ -107,17 +111,21 @@ new class extends Component {
                 @endif
             </div>
 
+            @can('update_profile')
             <div class="flex items-center gap-4">
                 <div class="flex items-center justify-end">
                     <flux:button variant="primary" type="submit" class="w-full">{{ __('Save') }}</flux:button>
                 </div>
-
+                
                 <x-action-message class="me-3" on="profile-updated">
                     {{ __('Saved.') }}
                 </x-action-message>
             </div>
+            @endcan
         </form>
 
+        @can('delete_account')
         <livewire:settings.delete-user-form />
+        @endcan
     </x-settings.layout>
 </section>

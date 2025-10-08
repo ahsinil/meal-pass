@@ -196,9 +196,11 @@ $delete = function () {
     {{-- Toolbar --}}
     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div class="flex items-center gap-2">
+            @can('create_meals')
             <flux:modal.trigger name="meal-form">
                 <flux:button variant="primary" icon="plus" class="px-3 py-2 font-bold">Tambah Makanan</flux:button>
             </flux:modal.trigger>
+            @endcan
 
             {{-- Filter Dropdown --}}
             <flux:dropdown>
@@ -266,10 +268,14 @@ $delete = function () {
                         </td>
                         <td class="px-4 py-2">
                             <div class="flex flex-wrap gap-2">
+                                @can('update_meals')
                                 <button wire:click="edit({{ $data->id }})" class="rounded-lg border border-slate-300 px-2 py-1 hover:bg-slate-50 dark:border-slate-600 dark:hover:bg-slate-700">Edit</button>
+                                @endcan
+                                @can('delete_meals')
                                 <flux:modal.trigger name="confirm-delete" wire:click="$set('editingId', {{ $data->id }})">
                                 <button class="rounded-lg border border-red-300 px-2 py-1 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950/40">Hapus</button>
                                 </flux:modal.trigger>
+                                @endcan
                             </div>
                         </td>
                     </tr>
