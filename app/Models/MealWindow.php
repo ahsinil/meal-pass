@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class MealWindow extends Model
 {
@@ -13,4 +14,9 @@ class MealWindow extends Model
         'location',
         'is_active',
     ];
+
+    public function sessions(): HasMany
+    {
+        return $this->hasMany(MealSession::class, 'meal_window_id');
+    }
 }

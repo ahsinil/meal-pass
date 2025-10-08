@@ -16,7 +16,7 @@ state([
     'activeFilter' => '', // '' (all), '1' (active), '0' (inactive)
     'dateFilter' => '',
     'mealWindowFilter' => '',
-    'sortField' => 'created_at',
+    'sortField' => 'date',
     'sortDir'   => 'desc',
     'perPage'   => 10,
 
@@ -50,9 +50,10 @@ rules(fn () => [
 ]);
 
 updated([
-    'search', function () {
-        $this->resetPage();
-    },
+    'search' => fn() => $this->resetPage(),
+    'activeFilter' => fn() => $this->resetPage(),
+    'dateFilter' => fn() => $this->resetPage(),
+    'mealWindowFilter' => fn() => $this->resetPage(),
 ]);
 
 $sortBy = function (string $field) {
@@ -93,6 +94,11 @@ $meals = computed(function () {
     // meal window filter
     if ($this->mealWindowFilter) {
         $q->where('meal_window_id', $this->mealWindowFilter);
+    }
+
+    // active filter
+    if ($this->activeFilter !== '') {
+        $q->where('is_active', $this->activeFilter);
     }
 
     $q->orderBy($this->sortField, $this->sortDir);
@@ -155,6 +161,9 @@ $save = function () {
         'is_active' => ['required','boolean'],
     ]);
 
+    if ($data['is_active'] == 1) {
+        MealSession::where('is_active', 1)->update(['is_active' => 0]);
+    }
     // siapkan payload
     $payload = [
         'date'  => $data['date'],
@@ -197,7 +206,7 @@ $delete = function () {
                 <flux:menu>
                     <flux:menu.submenu heading="Tanggal">
                         <div class="px-4 py-2">
-                            <input type="date" wire:model.live="dateFilter" class="w-full rounded border px-2 py-1 text-sm border-zinc-300 dark:border-zinc-700" />
+                            <input type="date" wire:model.live="dateFilter" class="w-full rounded border px-2 py-1 text-sm border-white dark:border-zinc-700" />
                         </div>
                     </flux:menu.submenu>
                     <flux:menu.submenu heading="Waktu Makan">
@@ -231,7 +240,7 @@ $delete = function () {
             <thead class="bg-zinc-50 text-left text-xs uppercase tracking-wide text-zinc-600 dark:bg-zinc-900 dark:text-zinc-300">
                 <tr>
                     @php
-                        $cols = ['date' => 'Tanggal', 'meal_window_id' => 'Jam Makan', 'qty' => 'Jumlah', 'is_active' => 'Status'];
+                        $cols = ['date' => 'Tanggal Produksi', 'meal_window_id' => 'Waktu Makan', 'qty' => 'Jumlah', 'is_active' => 'Status'];
                     @endphp
                     @foreach ($cols as $field => $label)
                         <th class="px-4 py-3">
@@ -248,7 +257,7 @@ $delete = function () {
             </thead>
             <tbody class="divide-y divide-zinc-200 bg-white text-sm dark:divide-zinc-700 dark:bg-zinc-900 dark:text-zinc-100">
                 @forelse ($this->meals as $data)
-                    <tr class="hover:bg-zinc-50 dark:hover:bg-zinc-600/20">
+                    <tr class="@if($data->is_active) bg-green-100 dark:bg-green-900 @endif hover:bg-zinc-50 dark:hover:bg-zinc-600/20">
                         <td class="px-4 py-2 font-medium">{{ $data->dateIndo }}</td>
                         <td class="px-4 py-2">{{ $data->mealTime ? $data->mealTime->name . ' (' . substr($data->mealTime->start_time, 0, 5) . ' - ' . substr($data->mealTime->end_time, 0, 5) . ')' : '-' }}</td>
                         <td class="px-4 py-2 text-zinc-500 dark:text-zinc-300">{{ $data->qty }} porsi</td>
@@ -293,7 +302,7 @@ $delete = function () {
         x-data="{ sensitive: true }"
     >
 
-        <flux:input id="date" label="Tanggal*" type="date" wire:model="date" />
+        <flux:input id="date" label="Tanggal Produksi*" type="date" wire:model="date" />
         <flux:input.group label="Waktu Makan*" for="meal_window_id" class="flex items-center">
 
             <flux:select id="meal_window_id" wire:model="meal_window_id">

@@ -3,10 +3,14 @@
 namespace App\Models;
 
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class MealSession extends Model
 {
+    use HasFactory;
+
+    protected $table = 'meal_sessions';
     protected $fillable = [
         'date',
         'meal_window_id',
@@ -14,6 +18,16 @@ class MealSession extends Model
         'notes',
         'is_active',
     ];
+
+    public function pickups()
+    {
+        return $this->hasMany(Pickup::class);
+    }
+
+    public function getTotalPickupAttribute()
+    {
+        return $this->pickups()->count();
+    }
 
     public function mealTime()
     {
