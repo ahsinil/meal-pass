@@ -35,6 +35,14 @@ new class extends Component {
 
     public bool $hasSession = false;
 
+    /** @var array<string,mixed> */
+    public array $activeSessionStats = [];
+
+    /** @var array<int,array{employee:string,department:string,method:string,time:string,window:string,overriden:bool,officer:?string}> */
+    public array $activeSessionLatestPickups = [];
+
+    public bool $showActiveSessionPickups = false;
+
     public function mount(): void
     {
         $this->date = now('Asia/Jakarta')->toDateString();
@@ -48,7 +56,12 @@ new class extends Component {
         $this->refreshWindows();
         $this->refreshStats();
     }
-    public function updatedWindowId() { $this->refreshStats(); }
+
+    public function updatedWindowId($value)
+    {
+        $this->windowId = $value ? (int) $value : null;
+        $this->refreshStats();
+    }
 
     protected function getSession(): ?MealSession
     {
@@ -92,12 +105,13 @@ new class extends Component {
         $prevRemaining = 0;
         if ($this->windowId) {
             $prevDate = Carbon::parse($this->date)->subDay()->toDateString();
-            $prevSession = MealSession::where('date', $prevDate)->select('id')->distinct()->pluck('id');
-            $prevQty = MealSession::where('date', $prevDate)->sum('qty');
+            $prevSession = MealSession::where('date', $prevDate)
+                ->where('meal_window_id', $this->windowId)
+                ->first();
 
             if ($prevSession) {
-                $prevPrepared = (int) $prevQty ?? 0;
-                $prevTaken    = (int) Pickup::whereIn('meal_session_id', $prevSession)->count();
+                $prevPrepared = (int) ($prevSession->qty ?? 0);
+                $prevTaken    = (int) Pickup::where('meal_session_id', $prevSession->id)->count();
                 $prevRemaining = max(0, $prevPrepared - $prevTaken);
             }
         }
@@ -133,6 +147,12 @@ new class extends Component {
         $this->topDepartments = $this->buildTopDepartments($session);
 
         $this->latestPickups = $this->buildLatestPickups($session);
+
+        [$this->activeSessionStats, $this->activeSessionLatestPickups] = $this->buildActiveSessionStats($session);
+
+        if (empty($this->activeSessionStats)) {
+            $this->showActiveSessionPickups = false;
+        }
     }
 
     protected function refreshWindows(): void
@@ -154,8 +174,8 @@ new class extends Component {
             return;
         }
 
-        if (! $this->windowId || ! collect($windows)->contains(fn ($w) => $w['id'] === $this->windowId)) {
-            $this->windowId = $windows[0]['id'];
+        if ($this->windowId && ! collect($windows)->contains(fn ($w) => $w['id'] === $this->windowId)) {
+            $this->windowId = null;
         }
     }
 
@@ -242,17 +262,175 @@ new class extends Component {
             })
             ->toArray();
     }
+
+    /**
+     * @return array{0:array<string,mixed>,1:array<int,array{employee:string,department:string,method:string,time:string,window:string,overriden:bool,officer:?string}>}
+     */
+    protected function buildActiveSessionStats(?MealSession $currentSession): array
+    {
+        $activeSession = MealSession::query()
+            ->with('mealTime:id,name,start_time,end_time')
+            ->where('is_active', 1)
+            ->orderByDesc('date')
+            ->orderByDesc('id')
+            ->first();
+
+        if (!$activeSession) {
+            return [[], []];
+        }
+
+        $prepared = (int) ($activeSession->qty ?? 0);
+
+        if ($currentSession && $currentSession->id === $activeSession->id) {
+            $taken     = $this->stats['taken'];
+            $overrides = $this->stats['overrides'];
+        } else {
+            $taken = (int) Pickup::where('meal_session_id', $activeSession->id)->count();
+            $overrides = (int) Pickup::where('meal_session_id', $activeSession->id)
+                ->where('overriden', 1)
+                ->count();
+        }
+
+        $remaining = max(0, $prepared - $taken);
+        $progress  = $prepared > 0 ? round($taken / $prepared * 100, 1) : 0.0;
+
+        $latest = Pickup::query()
+            ->with([
+                'picker:id,name,department',
+                'officer:id,name',
+            ])
+            ->where('meal_session_id', $activeSession->id)
+            ->orderByDesc('picked_at')
+            ->limit(5)
+            ->get()
+            ->map(function (Pickup $pickup) use ($activeSession) {
+                $pickedAt = Carbon::parse($pickup->picked_at)->timezone('Asia/Jakarta');
+
+                return [
+                    'employee'   => (string) ($pickup->picker?->name ?? 'Tidak diketahui'),
+                    'department' => (string) ($pickup->picker?->department ?? '-'),
+                    'method'     => (string) $pickup->method,
+                    'time'       => $pickedAt->format('H:i'),
+                    'window'     => (string) ($activeSession->mealTime?->name ?? '-'),
+                    'overriden'  => (bool) $pickup->overriden,
+                    'officer'    => $pickup->officer?->name,
+                ];
+            })
+            ->toArray();
+
+        return [[
+            'id'        => $activeSession->id,
+            'date'      => Carbon::parse($activeSession->date)->translatedFormat('d M Y'),
+            'window'    => $activeSession->mealTime?->name ?? '-',
+            'prepared'  => $prepared,
+            'taken'     => $taken,
+            'remaining' => $remaining,
+            'overrides' => $overrides,
+            'progress'  => $progress,
+        ], $latest];
+    }
+
+    public function toggleActiveSessionPickups(): void
+    {
+        $this->showActiveSessionPickups = ! $this->showActiveSessionPickups;
+    }
 };
 
 ?>
 
-<!-- VIEW: Tailwind + Flux UI -->
 <div class="space-y-6">
     <div class="flex items-center justify-between">
-        <flux:heading size="lg">Dashboard Catering</flux:heading>
-        <flux:text class="text-sm text-zinc-500">Tanggal Hari Ini: {{ \Carbon\Carbon::now()->translatedFormat('d MY') }}</flux:text>
+        <flux:heading size="xl">Dashboard Catering</flux:heading>
+        <flux:text class="text-sm text-zinc-500">Tanggal Hari Ini: {{ \Carbon\Carbon::now()->translatedFormat('d F Y') }}</flux:text>
     </div>
 
+    @can('view_active_session_stats')
+    @if(!empty($activeSessionStats))
+        <div class="rounded-2xl border border-emerald-200/70 bg-emerald-50/80 p-5 shadow-sm dark:border-emerald-700/50 dark:bg-emerald-900/70">
+            <div class="flex flex-wrap items-start justify-between gap-6">
+                <div>
+                    <div class="text-xs font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-300">Sesi Aktif Saat Ini</div>
+                    <div class="mt-1 text-lg font-semibold text-emerald-900 dark:text-white">{{ $activeSessionStats['window'] }}</div>
+                    <div class="text-sm text-emerald-700 dark:text-emerald-200/70">{{ $activeSessionStats['date'] }}</div>
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 flex-1 sm:flex-none">
+                    <div>
+                        <div class="text-xs text-emerald-600/80 dark:text-emerald-200/70">Disiapkan</div>
+                        <div class="text-lg font-semibold text-emerald-900 dark:text-white">{{ $activeSessionStats['prepared'] }}</div>
+                    </div>
+                    <div>
+                        <div class="text-xs text-emerald-600/80 dark:text-emerald-200/70">Sudah diambil</div>
+                        <div class="text-lg font-semibold text-emerald-900 dark:text-white">{{ $activeSessionStats['taken'] }}</div>
+                    </div>
+                    <div>
+                        <div class="text-xs text-emerald-600/80 dark:text-emerald-200/70">Sisa</div>
+                        <div class="text-lg font-semibold text-emerald-900 dark:text-white">{{ $activeSessionStats['remaining'] }}</div>
+                    </div>
+                    <div>
+                        <div class="text-xs text-emerald-600/80 dark:text-emerald-200/70">Override</div>
+                        <div class="text-lg font-semibold text-emerald-900 dark:text-white">{{ $activeSessionStats['overrides'] }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <div class="h-2 w-full rounded-full bg-emerald-200/70 dark:bg-emerald-900/50 overflow-hidden">
+                    <div class="h-full bg-emerald-500 dark:bg-emerald-400" style="width: {{ min(100, $activeSessionStats['progress']) }}%"></div>
+                </div>
+                <div class="mt-2 text-xs text-emerald-700 dark:text-emerald-200/70">Progress pengambilan {{ $activeSessionStats['progress'] }}%</div>
+            </div>
+        </div>
+
+        <div class="space-y-2">
+            <button type="button" wire:click="toggleActiveSessionPickups" class="w-full inline-flex items-center justify-between rounded-2xl border border-emerald-200/70 bg-emerald-50/80 px-4 py-3 text-sm font-medium text-emerald-800 shadow-sm transition hover:bg-emerald-50 dark:border-emerald-700/50 dark:bg-emerald-900/70 dark:text-white dark:hover:bg-emerald-900/40">
+                <span>Pengambilan Terbaru</span>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4 transition-transform duration-200 {{ $showActiveSessionPickups ? 'rotate-180' : '' }}">
+                    <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.12l3.71-3.89a.75.75 0 111.08 1.04l-4.24 4.45a.75.75 0 01-1.08 0L5.21 8.27a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+                </svg>
+            </button>
+
+            @if($showActiveSessionPickups)
+                <div class="rounded-2xl border border-emerald-200/70 bg-emerald-50/80 p-5 shadow-sm dark:border-emerald-700/50 dark:bg-emerald-900/70">
+                    <div class="space-y-3">
+                        @forelse($activeSessionLatestPickups as $pickup)
+                            <div class="rounded-xl border border-emerald-200/60 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-emerald-900">
+                                <div class="flex items-start justify-between gap-3">
+                                    <div>
+                                        <div class="font-medium text-emerald-900 dark:text-white">
+                                            {{ $pickup['employee'] }}
+                                            <span class="text-xs font-normal text-emerald-600 dark:text-zinc-200/70">({{ $pickup['department'] }})</span>
+                                        </div>
+                                        <div class="text-xs text-emerald-600 dark:text-zinc-200/70">{{ strtoupper($pickup['method']) }}</div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-sm font-semibold text-emerald-900 dark:text-white">{{ $pickup['time'] }}</div>
+                                        @if($pickup['officer'])
+                                            <div class="text-[11px] text-emerald-600 dark:text-zinc-200/70">Petugas: {{ $pickup['officer'] }}</div>
+                                        @endif
+                                    </div>
+                                </div>
+                                @if($pickup['overriden'])
+                                    <span class="mt-2 inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-amber-700 dark:bg-amber-900/40 dark:text-amber-200">Override</span>
+                                @endif
+                            </div>
+                        @empty
+                            <div class="rounded-xl border border-dashed border-zinc-200/60 bg-emerald-50/40 px-4 py-6 text-center text-xs text-emerald-600 dark:border-emerald-900/40 dark:bg-emerald-900/20 dark:text-emerald-200/70">
+                                Belum ada pengambilan untuk sesi aktif.
+                            </div>
+                        @endforelse
+                    </div>
+                </div>
+            @endif
+        </div>
+    
+        <div class="flex items-center justify-between">
+            <flux:heading size="lg">Statistik Data</flux:heading>
+        </div>
+    @endif
+    @endcan
+
+    @can('view_all_stats')
     <!-- Filters -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div>
@@ -262,6 +440,7 @@ new class extends Component {
         <div class="md:col-span-2">
             <label class="block text-sm font-medium mb-1">Waktu Makan</label>
             <flux:select wire:model.live="windowId">
+                <option value="">Pilih window</option>
                 @foreach($this->windows as $opt)
                     <option value="{{ $opt['id'] }}">{{ $opt['label'] }}</option>
                 @endforeach
@@ -271,12 +450,12 @@ new class extends Component {
 
     <!-- KPI cards -->
     <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <div class="rounded-2xl border border-emerald-200/60 bg-emerald-50 p-4 shadow-sm dark:border-emerald-900/40 dark:bg-emerald-900/25">
+        <div class="rounded-2xl border border-emerald-200/60 bg-emerald-50 p-4 shadow-sm dark:border-emerald-900/40 dark:bg-emerald-900/70 dark:shadow-emerald-900/40">
             <div class="flex items-center justify-between gap-4">
                 <div class="space-y-1">
-                    <div class="text-zinc-500 text-sm">Makanan Disiapkan</div>
+                    <div class="text-zinc-500 text-sm dark:text-white">Makanan Disiapkan</div>
                     <div class="text-3xl font-semibold">{{ $stats['prepared'] }}</div>
-                    <div class="text-xs text-zinc-500">Sesi: {{ \Carbon\Carbon::parse($date)->translatedFormat('d-m-Y') }}</div>
+                    <div class="text-xs text-zinc-500 dark:text-white">Sesi: {{ \Carbon\Carbon::parse($date)->translatedFormat('d-m-Y') }}</div>
                 </div>
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="h-12 w-12 text-emerald-500/70">
                     <path stroke-linecap="round" stroke-width="1.5" d="M22 12H2M12 2v20M13 12a4 4 0 0 0 4 4M11 12a4 4 0 0 1-4 4"/>
@@ -286,12 +465,12 @@ new class extends Component {
             </div>
         </div>
 
-        <div class="rounded-2xl border border-sky-200/60 bg-sky-50 p-4 shadow-sm dark:border-sky-900/40 dark:bg-sky-900/25">
+        <div class="rounded-2xl border border-sky-200/60 bg-sky-50 p-4 shadow-sm dark:border-sky-900/40 dark:bg-sky-900/70 dark:shadow-sky-900/40">
             <div class="flex items-center justify-between gap-4">
                 <div class="space-y-1">
-                    <div class="text-zinc-500 text-sm">Sudah Diambil</div>
+                    <div class="text-zinc-500 text-sm dark:text-white">Sudah Diambil</div>
                     <div class="text-3xl font-semibold">{{ $stats['taken'] }}</div>
-                    <div class="text-xs text-zinc-500">Override: {{ $stats['overrides'] }}</div>
+                    <div class="text-xs text-zinc-500 dark:text-white">Override: {{ $stats['overrides'] }}</div>
                 </div>
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="h-12 w-12 text-sky-500/70">
                     <path stroke-width="1.5" d="M2 12c0-4.714 0-7.071 1.464-8.536C4.93 2 7.286 2 12 2s7.071 0 8.535 1.464C22 4.93 22 7.286 22 12s0 7.071-1.465 8.535C19.072 22 16.714 22 12 22s-7.071 0-8.536-1.465C2 19.072 2 16.714 2 12Z"/>
@@ -301,34 +480,33 @@ new class extends Component {
             </div>
         </div>
 
-        <div class="rounded-2xl border border-amber-200/60 bg-amber-50 p-4 shadow-sm dark:border-amber-900/40 dark:bg-amber-900/25">
+        <div class="rounded-2xl border border-red-200/60 bg-red-50 p-4 shadow-sm dark:border-red-900/40 dark:bg-red-900/70 dark:shadow-red-900/40">
             <div class="flex items-center justify-between gap-4">
                 <div class="space-y-1">
-                    <div class="text-zinc-500 text-sm">Sisa</div>
+                    <div class="text-zinc-500 text-sm dark:text-white">Sisa</div>
                     <div class="text-3xl font-semibold">{{ $stats['remaining'] }}</div>
-                    <div class="text-xs text-zinc-500">Sisa kemarin: {{ $stats['remaining_yesterday'] }}</div>
+                    <div class="text-xs text-zinc-500 dark:text-white">Sisa kemarin: {{ $stats['remaining_yesterday'] }}</div>
                 </div>
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="h-12 w-12 text-amber-500/70">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="h-12 w-12 text-red-500/70">
                     <path stroke-linecap="round" stroke-width="1.5" d="m15.578 3.382 2 1.05c2.151 1.129 3.227 1.693 3.825 2.708C22 8.154 22 9.417 22 11.942v.117c0 2.524 0 3.787-.597 4.801-.598 1.015-1.674 1.58-3.825 2.709l-2 1.049C13.822 21.539 12.944 22 12 22s-1.822-.46-3.578-1.382l-2-1.05c-2.151-1.129-3.227-1.693-3.825-2.708C2 15.846 2 14.583 2 12.06v-.117c0-2.525 0-3.788.597-4.802.598-1.015 1.674-1.58 3.825-2.708l2-1.05C10.178 2.461 11.056 2 12 2s1.822.46 3.578 1.382ZM21 7.5 12 12m0 0L3 7.5m9 4.5v9.5"/>
                 </svg>
             </div>
         </div>
 
-        <div class="rounded-2xl border border-purple-200/60 bg-purple-50 p-4 shadow-sm dark:border-purple-900/40 dark:bg-purple-900/25">
+        <div class="rounded-2xl border border-purple-200/60 bg-purple-50 p-4 shadow-sm dark:border-purple-900/40 dark:bg-purple-900/70 dark:shadow-purple-900/40">
             <div class="flex items-center justify-between gap-4">
                 <div class="space-y-1">
-                    <div class="text-zinc-500 text-sm">Karyawan Aktif</div>
+                    <div class="text-zinc-500 text-sm dark:text-white">Karyawan Aktif</div>
                     <div class="text-3xl font-semibold">{{ $stats['active_users'] }}</div>
-                    <div class="flex items-center gap-1 text-xs text-zinc-500">Nonaktif: {{ $stats['inactive_users'] }}</div>
+                    <div class="flex items-center gap-1 text-xs text-zinc-500 dark:text-white">Nonaktif: {{ $stats['inactive_users'] }}</div>
                 </div>
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-12 w-12 text-purple-500/70">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-12 w-12 text-purple-500">
                     <circle cx="12" cy="6" r="4" stroke-width="1.5"/>
                     <path stroke-width="1.5" d="M20 17.5c0 2.485 0 4.5-8 4.5s-8-2.015-8-4.5S7.582 13 12 13s8 2.015 8 4.5Z"/>
                 </svg>
             </div>
         </div>
     </div>
-
     @if($hasSession)
         <div class="rounded-2xl border border-zinc-200/60 bg-white p-4 shadow-sm dark:border-zinc-700/50 dark:bg-zinc-900/35">
             <div class="flex items-center justify-between">
@@ -366,6 +544,13 @@ new class extends Component {
             </div>
         </div>
     @endif
+
+    @unless($hasSession)
+        <div class="rounded-2xl border border-dashed border-zinc-200/60 bg-zinc-50 p-4 text-sm text-zinc-600 shadow-sm dark:border-zinc-700/50 dark:bg-amber-600/60 dark:text-white">
+            Sesi untuk tanggal dan waktu makan belum dipilih! Pilih tanggal dan waktu makan agar metrik terisi.
+        </div>
+    @endunless
+    @endcan
 
     {{-- <!-- Chart + Top Departments -->
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
@@ -445,9 +630,4 @@ new class extends Component {
         </div>
     </div> --}}
 
-    @unless($hasSession)
-        <div class="rounded-2xl border border-dashed border-zinc-200/60 bg-zinc-50 p-4 text-sm text-zinc-600 shadow-sm dark:border-zinc-700/50 dark:bg-zinc-900/35 dark:text-zinc-400">
-            Sesi untuk tanggal dan window terpilih belum dibuat. Pilih tanggal dan window agar metrik terisi.
-        </div>
-    @endunless
 </div>
