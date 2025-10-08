@@ -25,16 +25,17 @@ class UserFactory extends Factory
     {
         return [
             'name' => fake()->name(),
-            'first_name' => fake()->firstName(),
-            'last_name' => fake()->lastName(),
+            // 'first_name' => fake()->firstName(),
+            // 'last_name' => fake()->lastName(),
             'email' => fake()->unique()->safeEmail(),
-            'phone' => fake()->unique()->phoneNumber(),
+            'phone' => fake()->unique()->phoneNumber('ID'),
+            'password' => static::$password ??= Hash::make('12345678'),
             'employee_code' => 'EMP' . fake()->unique()->numberBetween(1000, 9999),
-            'department' => fake()->randomElement(['HR', 'Finance', 'IT', 'Sales', 'Marketing']),
+            'department' => fake()->randomElement(['HR', 'Finance', 'Operator', 'Technical', 'Admin']),
             'pickup_code' => Str::upper(Str::random(6)),
-            'is_active' => fake()->boolean(80), // 80% chance of being active
+            'is_active' => 1,
+            'is_admin' => fake()->boolean(20),
             'email_verified_at' => now(),
-            'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
         ];
     }

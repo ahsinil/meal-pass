@@ -2,6 +2,8 @@
 
 namespace Database\Seeders;
 
+use App\Models\MealSession;
+use App\Models\Pickup;
 use App\Models\User;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -13,11 +15,16 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        User::factory(20)->create();
+        // User::factory(250)->create();
+
+        // MealSession::factory(90)->create();
+
+        // Pickup::factory(6000)->create();
 
         // User::factory()->create([
-        //     'name' => 'Test User',
-        //     'email' => 'test@example.com',
+        //     'name' => 'Super Admin',
+        //     'email' => 'ganti@ini.local',
+        //     'password' => Hash::make('password'),
         // ]);
     }
 }
