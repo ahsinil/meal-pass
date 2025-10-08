@@ -2,6 +2,7 @@
 
 use function Livewire\Volt\{title, state, rules, computed, updated, usesPagination};
 use App\Models\User;
+use App\Exports\EmployeeExport;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 
@@ -29,6 +30,8 @@ state([
     'employee_code' => '',
     'is_active' => '',
     'password'  => '', // opsional (untuk create / reset)
+    'start_date' => '',
+    'end_date' => '',
 
     // ui
     'showDeleteConfirm' => false,
@@ -55,9 +58,10 @@ rules(fn () => [
 ]);
 
 updated([
-    'search', function () {
-        $this->resetPage();
-    },
+    'search' => fn() => $this->resetPage(),
+    'trashFilter' => fn() => $this->resetPage(),
+    'departmentFilter' => fn() => $this->resetPage(),
+    'activeFilter' => fn() => $this->resetPage(),
 ]);
 
 // $exportUrl = computed(function () {
@@ -177,6 +181,10 @@ $delete = function () {
     $this->dispatch('toast', type: 'info', message: 'User berhasil dihapus.');
 };
 
+$export = function () {
+    return new EmployeeExport();
+}
+
 // $restore = function (int $id) {
 //     User::withTrashed()->whereKey($id)->restore();
 //     session()->flash('ok', 'User dipulihkan.');
@@ -206,14 +214,8 @@ $delete = function () {
             <flux:modal.trigger name="employee-form">
                 <flux:button variant="primary" icon="plus" class="px-3 py-2 font-bold">Tambah Karyawan</flux:button>
             </flux:modal.trigger>
+            <flux:button wire:click="export" variant="outline" icon="document-arrow-down" class="px-3 py-2 font-bold">Export Excel</flux:button>
 
-            {{-- <a href="{{ $exportUrl }}" class="rounded-lg border border-slate-300 px-3 py-2 text-sm hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
-                Export Excel
-            </a> --}}
-        </div>
-
-
-        <div class="relative flex items-center gap-2">
 
             {{-- Filter Dropdown --}}
             <flux:dropdown>
@@ -241,6 +243,13 @@ $delete = function () {
                 </flux:menu>
             </flux:dropdown>
 
+            {{-- <a href="{{ $exportUrl }}" class="rounded-lg border border-slate-300 px-3 py-2 text-sm hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
+                Export Excel
+            </a> --}}
+        </div>
+
+
+        <div class="relative flex items-center gap-2">
             {{-- Search --}}
             <flux:input id="search" icon="magnifying-glass" type="text" wire:model.live.debounce.400ms="search" />
             {{-- <input type="text" placeholder="Cari nama/email…" wire:model.live.debounce.400ms="search"
@@ -301,7 +310,6 @@ $delete = function () {
         </table>
     </div>
 
-
     <div class="flex items-center gap-3 flex-row">
         <flux:select wire:model.live="perPage" class="hidden sm:block px-2 py-1 max-w-[80px]">
             @foreach([10,25,50,100] as $n)
@@ -342,6 +350,7 @@ $delete = function () {
         onSubmit="save"
         width="md:w-96"
         @close="resetForm"
+        x-data="{ sensitive: true }"
     >
 
         <flux:input id="name" label="Nama*" type="text" wire:model="name" />
@@ -380,17 +389,20 @@ $delete = function () {
         </div>
     </flux:modal>
 
-    {{-- Modal Delete --}}
-    {{-- @if ($showDeleteConfirm)
-        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div class="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-xl dark:border-slate-700 dark:bg-slate-900">
-                <h3 class="mb-2 text-lg font-semibold text-slate-800 dark:text-slate-100">Hapus Data</h3>
-                <p class="mb-4 text-sm text-slate-600 dark:text-slate-300">Yakin ingin menghapus data karyawan?</p>
-                <div class="flex items-center justify-end gap-2">
-                    <button wire:click="$set('showDeleteConfirm', false)" class="rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-600 dark:text-slate-200">Batal</button>
-                    <button wire:click="delete" class="rounded-lg bg-red-600 px-3 py-2 text-white hover:bg-red-700 dark:bg-red-700">Hapus</button>
-                </div>
+    <flux:modal name="export-form" class="min-w-[22rem]" :dismissible="true">
+        <div class="space-y-6">
+            <div>
+                <flux:heading size="lg">Export Data</flux:heading>
+            </div>
+
+            <flux:input id="start_date" label="Tanggal Awal*" type="date" max="{{ now()->format('Y-m-d') }}" wire:model.live="start_date" />
+            <flux:input id="end_date" label="Tanggal Akhir" type="date" min="{{ $this->start_date }}" max="{{ now()->format('Y-m-d') }}" wire:model="end_date" />
+
+            <div class="flex gap-2">
+                <flux:spacer />
+                <flux:button wire:click="export" variant="primary">Export</flux:button>
             </div>
         </div>
-    @endif --}}
+    </flux:modal>
+
 </div>
