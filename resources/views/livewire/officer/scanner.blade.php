@@ -298,7 +298,7 @@ class extends Component
 
                @if ($this->pickupList != null)
                <div class="mt-6">
-                   {{ $this->pickupList->links('livewire::simple-tailwind') }}
+                   {{ $this->pickupList->links() }}
                 </div>
                 @endif
 

@@ -340,7 +340,7 @@ new class extends Component {
 
 <div class="space-y-6">
     <div class="flex items-center justify-between">
-        <flux:heading size="xl">Dashboard Catering</flux:heading>
+        <flux:heading size="xl">Dashboard</flux:heading>
         <flux:text class="text-sm text-zinc-500">Tanggal Hari Ini: {{ \Carbon\Carbon::now()->translatedFormat('d F Y') }}</flux:text>
     </div>
 
@@ -360,7 +360,7 @@ new class extends Component {
                         <div class="text-lg font-semibold text-emerald-900 dark:text-white">{{ $activeSessionStats['prepared'] }}</div>
                     </div>
                     <div>
-                        <div class="text-xs text-emerald-600/80 dark:text-emerald-200/70">Sudah diambil</div>
+                        <div class="text-xs text-emerald-600/80 dark:text-emerald-200/70">Diambil</div>
                         <div class="text-lg font-semibold text-emerald-900 dark:text-white">{{ $activeSessionStats['taken'] }}</div>
                     </div>
                     <div>
@@ -438,9 +438,8 @@ new class extends Component {
         </div>
 
         <div class="md:col-span-2">
-            <label class="block text-sm font-medium mb-1">Waktu Makan</label>
-            <flux:select wire:model.live="windowId">
-                <option value="">Pilih window</option>
+            <flux:select wire:model.live="windowId" label="Waktu Makan">
+                <option value="" @selected(!$windowId)>Pilih window</option>
                 @foreach($this->windows as $opt)
                     <option value="{{ $opt['id'] }}">{{ $opt['label'] }}</option>
                 @endforeach

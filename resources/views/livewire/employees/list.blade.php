@@ -154,7 +154,8 @@ $save = function () {
         'email' => $data['email'],
         'phone' => $data['phone'],
         'department' => $data['department'],
-        'employee_code' => $data['employee_code'],
+        'employee_code' => $data['employee_code'] ?? 'EMP'. Str::upper(Str::random(3)),
+        'pickup_code' => Str::upper(Str::random(6)),
         'is_active' => $data['is_active'],
         'is_admin' => 0, // default bukan admin
     ];
@@ -162,7 +163,10 @@ $save = function () {
         $payload['password'] = Hash::make($data['password']);
     }
 
-    User::updateOrCreate(['id' => $this->editingId], $payload);
+    $user = User::updateOrCreate(['id' => $this->editingId], $payload);
+    if ($user->wasRecentlyCreated && !$user->hasRole('employee')) {
+        $user->assignRole('employee');
+    }
 
     $this->modal('employee-form')->close();
     $this->resetForm();

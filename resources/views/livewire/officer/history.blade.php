@@ -3,17 +3,19 @@
 use App\Models\MealSession;
 use Livewire\Attributes\{Layout, Title, Computed};
 use Livewire\Volt\Component;
+use Livewire\WithPagination;
 
 new
 #[Layout('components.layouts.simple')]
 #[Title('Riwayat Pengambilan')]
 class extends Component {
+    use WithPagination;
     // listing
     public $search    = '';
     public $activeFilter = ''; // '' (all); '1' (active); '0' (inactive)
     public $dateFilter = '';
     public $mealWindowFilter = '';
-    public $sortField = 'created_at';
+    public $sortField = 'date';
     public $sortDir   = 'desc';
     public $perPage   = 30;
 

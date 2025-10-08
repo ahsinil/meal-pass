@@ -4,14 +4,17 @@ use App\Models\Pickup;
 use Livewire\Attributes\{Layout, Title, Computed};
 use Livewire\Volt\Component;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use Livewire\WithPagination;
 
 new
 #[Layout('components.layouts.simple')]
 #[Title('Riwayat Pengambilan')]
 class extends Component
 {
+    use WithPagination;
+    
     // listing
-    public $sortField = 'created_at';
+    public $sortField = 'date';
     public $sortDir   = 'desc';
 
     #[Computed]
