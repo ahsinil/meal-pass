@@ -15,12 +15,22 @@
                 <flux:navlist.group :heading="__('Platform')" class="grid">
                     <flux:navlist.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>{{ __('Dashboard') }}</flux:navlist.item>
                 </flux:navlist.group>
+                @canany(['view_employees', 'view_staffs', 'view_meals', 'view_pickups'])
                 <flux:navlist.group :heading="__('Data')" class="grid">
+                    @can('view_employees')
                     <flux:navlist.item icon="user" :href="route('employees')" :current="request()->routeIs('employees')" wire:navigate>{{ __('Karyawan') }}</flux:navlist.item>
+                    @endcan
+                    @can('view_staffs')
                     <flux:navlist.item icon="key" :href="route('officers')" :current="request()->routeIs('officers')" wire:navigate>{{ __('Petugas') }}</flux:navlist.item>
+                    @endcan
+                    @can('view_meals')
                     <flux:navlist.item icon="document-text" :href="route('meals')" :current="request()->routeIs('meals')" wire:navigate>{{ __('Makanan') }}</flux:navlist.item>
+                    @endcan
+                    @can('view_pickups')
                     <flux:navlist.item icon="arrow-up-on-square-stack" :href="route('pickups')" :current="request()->routeIs('pickups')" wire:navigate>{{ __('Pengambilan') }}</flux:navlist.item>
+                    @endcan
                 </flux:navlist.group>
+                @endcanany
             </flux:navlist>
 
             <flux:spacer />
