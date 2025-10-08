@@ -136,7 +136,10 @@ $save = function () {
         $payload['password'] = Hash::make($data['password']);
     }
 
-    User::updateOrCreate(['id' => $this->editingId], $payload);
+    $user = User::updateOrCreate(['id' => $this->editingId], $payload);
+    if ($user->wasRecentlyCreated && !$user->hasRole('staff')) {
+        $user->assignRole('staff');
+    }
 
     $this->modal('employee-form')->close();
     $this->resetForm();

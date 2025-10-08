@@ -12,10 +12,19 @@ new class extends Component {
         <div class="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
             <x-app-logo />
 
-            <form method="POST" action="{{ route('logout') }}">
-                @csrf
-                <flux:button type="submit" icon="arrow-right-start-on-rectangle" variant="primary" class="text-sm">{{ __('Log out') }}</flux:button>
-            </form>
+            <div class="flex items-center gap-3">
+                @role('staff')
+                <flux:button href="{{ route('officer.settings') }}" icon="cog-6-tooth" variant="outline" class="text-sm" wire:navigate>Settings</flux:button>
+                @endrole
+                @role('employee')
+                <flux:button href="{{ route('employee.settings') }}" icon="cog-6-tooth" variant="outline" class="text-sm" wire:navigate>Settings</flux:button>
+                @endrole
+
+                <form method="POST" action="{{ route('logout') }}">
+                    @csrf
+                    <flux:button type="submit" icon="arrow-right-start-on-rectangle" variant="primary" class="text-sm">{{ __('Log out') }}</flux:button>
+                </form>
+            </div>
         </div>
     </header>
 </div>

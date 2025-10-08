@@ -26,5 +26,7 @@ class DatabaseSeeder extends Seeder
         //     'email' => 'ganti@ini.local',
         //     'password' => Hash::make('password'),
         // ]);
+
+        $this->call(PermissionSeeder::class);
     }
 }

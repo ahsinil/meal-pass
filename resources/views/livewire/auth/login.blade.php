@@ -20,6 +20,15 @@ new #[Layout('components.layouts.auth')] class extends Component {
 
     public bool $remember = false;
 
+    public function mount()
+    {
+        // Jika sudah login dan buka /login, langsung lempar sesuai role
+        if (Auth::check()) {
+            $target = \App\Support\RoleRedirector::urlFor(Auth::user());
+            $this->redirect($target, navigate: true);
+        }
+    }
+
     /**
      * Handle an incoming authentication request.
      */
@@ -33,14 +42,19 @@ new #[Layout('components.layouts.auth')] class extends Component {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
-                'phone' => __('auth.failed'),
+                'phone' => 'The provided credentials are incorrect.',
             ]);
+            return;
         }
 
         RateLimiter::clear($this->throttleKey());
         Session::regenerate();
 
-        $this->redirectIntended(default: route('dashboard', absolute: false), navigate: true);
+        $user = Auth::user();
+        $target = \App\Support\RoleRedirector::urlFor($user);
+
+        // Hormati "intended" bila user diarahkan dari halaman yang butuh auth
+        $this->redirectIntended($target, navigate: true);
     }
 
     /**
