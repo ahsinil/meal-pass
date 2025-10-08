@@ -46,9 +46,10 @@ rules(fn () => [
 ]);
 
 updated([
-    'search', function () {
-        $this->resetPage();
-    },
+    'search' => fn() => $this->resetPage(),
+    'trashFilter' => fn() => $this->resetPage(),
+    'departmentFilter' => fn() => $this->resetPage(),
+    'activeFilter' => fn() => $this->resetPage(),
 ]);
 
 $resetForm = function () {
@@ -161,12 +162,10 @@ $delete = function () {
     {{-- Toolbar --}}
     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div class="flex items-center gap-2">
+
             <flux:modal.trigger name="employee-form">
                 <flux:button variant="primary" icon="plus" class="px-3 py-2 font-bold">Tambah Petugas</flux:button>
             </flux:modal.trigger>
-        </div>
-
-        <div class="relative flex items-center gap-2">
 
             {{-- Filter Dropdown --}}
             <flux:dropdown>
@@ -194,6 +193,9 @@ $delete = function () {
                 </flux:menu>
             </flux:dropdown>
 
+        </div>
+
+        <div class="relative flex items-center gap-2">
             {{-- Search --}}
             <flux:input id="search" icon="magnifying-glass" type="text" wire:model.live.debounce.400ms="search" />
         </div>
