@@ -1,14 +1,16 @@
 <?php
 
-use function Livewire\Volt\{title, state, rules, computed, updated, usesPagination};
+use function Livewire\Volt\{title, state, rules, computed, updated, usesPagination, usesFileUploads};
 use App\Models\User;
 use App\Exports\EmployeeExport;
+use App\Imports\EmployeeImport;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 
-title('Data Karyawan');
-
 usesPagination();
+usesFileUploads();
+
+title('Data Karyawan');
 
 state([
     // listing
@@ -32,6 +34,7 @@ state([
     'password'  => '', // opsional (untuk create / reset)
     'start_date' => '',
     'end_date' => '',
+    'importFile' => null,
 
     // ui
     'showDeleteConfirm' => false,
@@ -82,6 +85,7 @@ $resetForm = function () {
     $this->department = '';
     $this->employee_code = '';
     $this->is_active = '';
+    $this->importFile = null;
     $this->resetErrorBag();
     $this->editing = false;
 };
@@ -187,6 +191,19 @@ $delete = function () {
 
 $export = function () {
     return new EmployeeExport();
+};
+
+$import = function () {
+    $this->validate([
+        'importFile' => ['required', 'file', 'mimes:csv,xlsx,xls', 'max:10240'],
+    ]);
+
+    (new EmployeeImport)->import($this->importFile, null, \Maatwebsite\Excel\Excel::XLSX);
+
+    $this->resetPage();
+    $this->resetForm();
+    $this->modal('import-form')->close();
+    $this->dispatch('toast', type: 'success', message: 'Data berhasil diimport.');
 }
 
 // $restore = function (int $id) {
@@ -219,6 +236,11 @@ $export = function () {
             <flux:modal.trigger name="employee-form">
                 <flux:button variant="primary" icon="plus" class="px-3 py-2 font-bold">Tambah Karyawan</flux:button>
             </flux:modal.trigger>
+            {{-- @can('import_employees') --}}
+            <flux:modal.trigger name="import-form">
+                <flux:button variant="outline" icon="document-arrow-up" class="px-3 py-2 font-bold">Import</flux:button>
+            </flux:modal.trigger>
+            {{-- @endcan --}}
             @endcan
             @can('export_employees')
             <flux:button wire:click="export" variant="outline" icon="document-arrow-down" class="px-3 py-2 font-bold">Export Excel</flux:button>
@@ -396,6 +418,41 @@ $export = function () {
                     <flux:button variant="ghost">Cancel</flux:button>
                 </flux:modal.close>
                 <flux:button wire:click="delete" variant="danger">Delete project</flux:button>
+            </div>
+        </div>
+    </flux:modal>
+
+    <flux:modal name="import-form" class="md:w-96" :dismissible="false">
+        <div wire:loading class="flex items-center justify-center w-full h-full transition-opacity opacity-100 duration-750 lg:grow">
+            <div class="flex justify-center items-center space-x-1 text-lg text-zinc-800 dark:text-gray-100">
+                <svg fill='none' class="w-10 h-10 animate-spin" viewBox="0 0 32 32" xmlns='http://www.w3.org/2000/svg'>
+                    <path 
+                        clip-rule='evenodd'
+                        d='M15.165 8.53a.5.5 0 01-.404.58A7 7 0 1023 16a.5.5 0 011 0 8 8 0 11-9.416-7.874.5.5 0 01.58.404z'
+                        fill='currentColor' 
+                        fill-rule='evenodd' />
+                </svg>
+                <div>Loading ...</div>
+            </div>
+        </div>
+
+        <div wire:loading.class='hidden' class="space-y-6">
+            <div>
+                <flux:heading size="lg">Import Data</flux:heading>
+                <flux:text class="mt-2">Input data karyawan sekaligus menggunakan file excel (XLSX).</flux:text>
+            </div>
+        
+            <div class="flex gap-2">
+                <flux:input id="import_file" type="file" accept=".xlsx" wire:model="importFile" />
+            </div>
+        
+            <div class="flex">
+                <flux:spacer />
+        
+                <flux:modal.close>
+                    <flux:button wire:click="resetForm" type="button" variant="filled" class="me-3">Batal</flux:button>
+                </flux:modal.close>
+                <flux:button wire:click="import" type="button" variant="primary">Import</flux:button>
             </div>
         </div>
     </flux:modal>

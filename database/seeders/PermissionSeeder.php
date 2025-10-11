@@ -26,6 +26,7 @@ class PermissionSeeder extends Seeder
             'create_employees',
             'update_employees',
             'delete_employees',
+            'import_employees',
             'export_employees',
 
             // Data Petugas
@@ -99,6 +100,7 @@ class PermissionSeeder extends Seeder
             'create_employees',
             'update_employees',
             'delete_employees',
+            // 'import_employees',
             'export_employees',
 
             // Data Petugas
