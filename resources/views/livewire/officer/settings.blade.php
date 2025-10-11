@@ -120,9 +120,9 @@ class extends Component
             </div>
 
             <flux:radio.group x-data variant="segmented" x-model="$flux.appearance">
-                <flux:radio value="light" icon="sun">{{ __('Light') }}</flux:radio>
-                <flux:radio value="dark" icon="moon">{{ __('Dark') }}</flux:radio>
-                <flux:radio value="system" icon="computer-desktop">{{ __('System') }}</flux:radio>
+                <flux:radio value="light" icon="sun">{{ __('Terang') }}</flux:radio>
+                <flux:radio value="dark" icon="moon">{{ __('Gelap') }}</flux:radio>
+                <flux:radio value="system" icon="computer-desktop">{{ __('Sistem') }}</flux:radio>
             </flux:radio.group>
         </section>
 
@@ -154,19 +154,19 @@ class extends Component
         <section class="rounded-2xl border border-zinc-200/70 bg-amber-50 p-6 shadow-sm dark:border-zinc-900/40 dark:bg-zinc-900">
             <div class="mb-6 flex items-center justify-between">
                 <div>
-                    <flux:heading size="md">Password</flux:heading>
-                    <flux:text class="text-sm text-zinc-500">Ganti password untuk keamanan akun.</flux:text>
+                    <flux:heading size="md">Kata Sandi</flux:heading>
+                    <flux:text class="text-sm text-zinc-500">Ganti kata sandi untuk keamanan akun.</flux:text>
                 </div>
 
                 @can('reset_password')
-                <flux:button variant="primary" wire:click="resetPassword">Reset Password</flux:button>
+                <flux:button variant="primary" wire:click="resetPassword">Reset Kata Sandi</flux:button>
                 @endcan
             </div>
 
             <form wire:submit.prevent="updatePassword" class="space-y-4">
                 <flux:input
                     wire:model.defer="current_password"
-                    label="Password Saat Ini"
+                    label="Kata Sandi Saat Ini"
                     type="password"
                     required
                     autocomplete="current-password"
@@ -174,7 +174,7 @@ class extends Component
 
                 <flux:input
                     wire:model.defer="password"
-                    label="Password Baru"
+                    label="Kata Sandi Baru"
                     type="password"
                     required
                     autocomplete="new-password"
@@ -182,7 +182,7 @@ class extends Component
 
                 <flux:input
                     wire:model.defer="password_confirmation"
-                    label="Konfirmasi Password"
+                    label="Konfirmasi Kata Sandi"
                     type="password"
                     required
                     autocomplete="new-password"

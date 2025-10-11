@@ -65,7 +65,7 @@ class extends Component {
             <div class="flex items-center justify-between">
                 <div class="flex items-center">
                     <flux:icon.receipt-refund />
-                    <flux:text class="ml-2 text-md sm:text-xl font-semibold">Daftar Pengambilan</flux:text>
+                    <flux:text class="ml-2 text-md sm:text-xl font-semibold">Daftar Riwayat Pengambilan</flux:text>
                 </div>
             </div>
 

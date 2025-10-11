@@ -3,6 +3,7 @@
 use App\Models\User;
 use App\Models\Pickup;
 use App\Models\MealSession;
+use Carbon\Carbon;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\{Layout, Title, Computed};
@@ -30,9 +31,7 @@ class extends Component
 
     public function mount()
     {
-        $mealSessionActive = MealSession::where('is_active', 1)->first();
-        $this->meal_session_id = $mealSessionActive ? $mealSessionActive->id : null;
-        $this->meal_qty = $mealSessionActive ? $mealSessionActive->qty : null;
+        $this->loadActiveSession();
     }
 
     public function resetForm(): void
@@ -48,6 +47,33 @@ class extends Component
         $this->mode = 'manual';
         $this->meal_session_id = null;
         $this->meal_qty = null;
+
+        $this->loadActiveSession();
+    }
+
+    private function loadActiveSession(): void
+    {
+        $session = MealSession::query()
+            ->where('is_active', 1)
+            ->orderByDesc('date')
+            ->orderByDesc('id')
+            ->first();
+
+        $this->meal_session_id = $session?->id;
+        $this->meal_qty = $session?->qty;
+    }
+
+    private function formatTime(?string $time): ?string
+    {
+        if (! $time) {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($time)->format('H:i');
+        } catch (\Throwable $e) {
+            return $time;
+        }
     }
 
     // manual input process
@@ -200,6 +226,47 @@ class extends Component
             // ->paginate(2);
             ->simplePaginate(25);
     }
+
+    #[computed]
+    public function activeSessionSummary(): array
+    {
+        if (! $this->meal_session_id) {
+            return [];
+        }
+
+        $session = MealSession::query()
+            ->with('mealTime:id,name,start_time,end_time,location')
+            ->withCount([
+                'pickups as taken' => fn ($query) => $query,
+                'pickups as overrides' => fn ($query) => $query->where('overriden', 1),
+            ])
+            ->find($this->meal_session_id);
+
+        if (! $session) {
+            return [];
+        }
+
+        $prepared = (int) ($session->qty ?? 0);
+        $taken = (int) ($session->taken ?? 0);
+        $overrides = (int) ($session->overrides ?? 0);
+        $remaining = max(0, $prepared - $taken);
+        $progress = $prepared > 0 ? round($taken / $prepared * 100, 1) : 0.0;
+
+        $startTime = $this->formatTime($session->mealTime?->start_time);
+        $endTime = $this->formatTime($session->mealTime?->end_time);
+
+        return [
+            'date' => Carbon::parse($session->date)->translatedFormat('d F Y'),
+            'window' => $session->mealTime?->name ?? '-',
+            'time' => $startTime && $endTime ? $startTime . ' - ' . $endTime : null,
+            'location' => $session->mealTime?->location,
+            'prepared' => $prepared,
+            'taken' => $taken,
+            'remaining' => $remaining,
+            'overrides' => $overrides,
+            'progress' => $progress,
+        ];
+    }
 };
 ?>
 
@@ -212,12 +279,68 @@ class extends Component
         <flux:button href="{{ route('pickup.history') }}" variant="primary" icon="receipt-refund" class="px-3 py-2 font-bold">Riwayat</flux:button>
     </div>
 
+    @php($activeSession = $this->activeSessionSummary)
+    @if (!empty($activeSession))
+    <section class="mx-auto mb-6 max-w-4xl px-4 sm:px-6 lg:px-8">
+        <div class="rounded-2xl border border-emerald-200/70 bg-emerald-50/80 p-5 shadow-sm dark:border-emerald-700/50 dark:bg-emerald-900/70">
+            <div class="flex flex-wrap items-start justify-between gap-6">
+                <div>
+                    <div class="text-xs font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-300">Sesi Aktif</div>
+                    <div class="mt-1 text-lg font-semibold text-emerald-900 dark:text-white">{{ $activeSession['window'] }}</div>
+                    <div class="text-sm text-emerald-700 dark:text-emerald-200/70">{{ $activeSession['date'] }}</div>
+                    @if (!empty($activeSession['time']))
+                        <div class="text-xs text-emerald-600/80 dark:text-emerald-200/70">{{ $activeSession['time'] }}</div>
+                    @endif
+                    @if (!empty($activeSession['location']))
+                        <div class="text-xs text-emerald-600/80 dark:text-emerald-200/70">Lokasi: {{ $activeSession['location'] }}</div>
+                    @endif
+                </div>
+
+                <div class="grid flex-1 grid-cols-2 gap-4 sm:flex-none sm:grid-cols-4">
+                    <div>
+                        <div class="text-xs text-emerald-600/80 dark:text-emerald-200/70">Disiapkan</div>
+                        <div class="text-lg font-semibold text-emerald-900 dark:text-white">{{ $activeSession['prepared'] }}</div>
+                    </div>
+                    <div>
+                        <div class="text-xs text-emerald-600/80 dark:text-emerald-200/70">Diambil</div>
+                        <div class="text-lg font-semibold text-emerald-900 dark:text-white">{{ $activeSession['taken'] }}</div>
+                    </div>
+                    <div>
+                        <div class="text-xs text-emerald-600/80 dark:text-emerald-200/70">Sisa</div>
+                        <div class="text-lg font-semibold text-emerald-900 dark:text-white">{{ $activeSession['remaining'] }}</div>
+                    </div>
+                    <div>
+                        <div class="text-xs text-emerald-600/80 dark:text-emerald-200/70">Override</div>
+                        <div class="text-lg font-semibold text-emerald-900 dark:text-white">{{ $activeSession['overrides'] }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <div class="h-2 w-full overflow-hidden rounded-full bg-emerald-200/70 dark:bg-emerald-900/50">
+                    <div class="h-full bg-emerald-500 dark:bg-emerald-400" style="width: {{ min(100, $activeSession['progress']) }}%"></div>
+                </div>
+                <div class="mt-2 text-xs text-emerald-700 dark:text-emerald-200/70">Progress pengambilan {{ $activeSession['progress'] }}%</div>
+            </div>
+        </div>
+    </section>
+    @endif
+
     <!-- Body -->
     <main class="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
 
         @if ($this->meal_session_id === null)
         <section class="rounded-2xl border-1 bg-amber-50 border-amber-300 dark:bg-zinc-900/80 dark:border-zinc-700 p-6 sm:p-10">
-            <flux:text class="ml-2 text-md sm:text-xl font-semibold text-center">Tidak ada makanan siap diambil</flux:text>
+            <div class="flex justify-center mb-4">
+                <svg class="h-52 w-52 text-amber-400/40 dark:text-zinc-100/50" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <polygon points="8,18 24,10 40,18 24,26" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linejoin="round" />
+                    <polygon points="8,18 8,32 24,40 24,26" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linejoin="round" />
+                    <polygon points="40,18 40,32 24,40 24,26" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linejoin="round" />
+                    <path d="M8 32l16-6 16 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" />
+                </svg>
+            </div>
+
+            <flux:text class="mb-8 text-md sm:text-xl font-semibold text-center text-amber-300 dark:text-zinc-100/70">Tidak ada makanan siap diambil</flux:text>
         </section>
         @else
         <section class="rounded-2xl border-1 bg-amber-50 border-amber-300 dark:bg-zinc-900/80 dark:border-zinc-700 p-6 sm:p-10 mb-6" x-data="{ tab: 'manual' }">
@@ -233,7 +356,7 @@ class extends Component
             </div>
 
             <div class="py-2" x-show="tab === 'manual'">
-                <flux:input id="pickup_code" label="Kode Pickup Karyawan" type="text" wire:model="input" placeholder="Scan atau ketik kode disini..." />
+                <flux:input id="pickup_code" label="Kode Pickup Karyawan" type="text" wire:model="input" placeholder="Scan atau ketik kode disini..." autofocus />
                 <flux:button variant="primary" class="mt-3 w-full" wire:click="checkInput">Cek Kode Pickup</flux:button>
             </div>
 
@@ -242,8 +365,8 @@ class extends Component
 
                 <div class="flex items-center gap-3 justify-end">
                     <span class="text-sm text-zinc-500" x-text="supportText"></span>
-                    <flux:button variant="outline" class="px-4 py-2" @click="stop()">Stop</flux:button>
-                    <flux:button variant="primary" class="px-4 py-2" @click="start()">Start</flux:button>
+                    <flux:button variant="outline" class="px-4 py-2" @click="stop()">Matikan</flux:button>
+                    <flux:button variant="primary" class="px-4 py-2" @click="start()">Mulai</flux:button>
                 </div>
             </div>
             

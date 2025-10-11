@@ -2,12 +2,12 @@
     <div class="me-10 w-full pb-4 md:w-[220px]">
         <flux:navlist>
             @can('view_profile_settings')
-            <flux:navlist.item :href="route('settings.profile')" wire:navigate>{{ __('Profile') }}</flux:navlist.item>
+            <flux:navlist.item :href="route('settings.profile')" wire:navigate>{{ __('Profil') }}</flux:navlist.item>
             @endcan
             @can('update_password')
-            <flux:navlist.item :href="route('settings.password')" wire:navigate>{{ __('Password') }}</flux:navlist.item>
+            <flux:navlist.item :href="route('settings.password')" wire:navigate>{{ __('Kata Sandi') }}</flux:navlist.item>
             @endcan
-            <flux:navlist.item :href="route('settings.appearance')" wire:navigate>{{ __('Appearance') }}</flux:navlist.item>
+            <flux:navlist.item :href="route('settings.appearance')" wire:navigate>{{ __('Tampilan') }}</flux:navlist.item>
         </flux:navlist>
     </div>
 

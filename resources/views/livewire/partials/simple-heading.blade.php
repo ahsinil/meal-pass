@@ -14,15 +14,15 @@ new class extends Component {
 
             <div class="flex items-center gap-3">
                 @role('staff')
-                <flux:button href="{{ route('officer.settings') }}" icon="cog-6-tooth" variant="outline" class="text-sm" wire:navigate>Settings</flux:button>
+                <flux:button href="{{ route('officer.settings') }}" icon="cog-6-tooth" variant="outline" class="text-sm" wire:navigate>Pengaturan</flux:button>
                 @endrole
                 @role('employee')
-                <flux:button href="{{ route('employee.settings') }}" icon="cog-6-tooth" variant="outline" class="text-sm" wire:navigate>Settings</flux:button>
+                <flux:button href="{{ route('employee.settings') }}" icon="cog-6-tooth" variant="outline" class="text-sm" wire:navigate>Pengaturan</flux:button>
                 @endrole
 
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
-                    <flux:button type="submit" icon="arrow-right-start-on-rectangle" variant="primary" class="text-sm">{{ __('Log out') }}</flux:button>
+                    <flux:button type="submit" icon="arrow-right-start-on-rectangle" variant="primary" class="text-sm">{{ __('auth.logout') }}</flux:button>
                 </form>
             </div>
         </div>
